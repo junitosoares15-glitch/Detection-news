@@ -1,0 +1,75 @@
+# =========================================================
+# Konfigurasi — Mining Notísia Online no Deteksaun Topiku
+# =========================================================
+
+rss:
+  # Feed RSS Tatoli (portal berita nasional Timor-Leste)
+  feed_url: "https://tatoli.tl/feed/"
+  source_name: "Tatoli"
+
+scraping:
+  # true  = tarik ISI ARTIKEL LENGKAP + kategori + gambar via web scraping
+  #         (RSS dipakai hanya untuk menemukan daftar link artikel terbaru)
+  # false = pakai ringkasan singkat dari RSS saja (lebih cepat, lebih ringan)
+  full_content: true
+
+  # Batasi jumlah artikel BARU yang di-scrape penuh per sekali jalan, supaya
+  # tidak membebani server Tatoli. Artikel yang sudah pernah di-scrape
+  # (sudah punya konten lengkap tersimpan) tidak akan di-scrape ulang.
+  max_articles_per_run: 20
+
+  # Jeda (detik) antar request ke halaman artikel — etika scraping yang sopan.
+  delay_seconds: 1.5
+
+  # Kandidat CSS selector untuk tiap elemen. Sistem akan mencoba satu per
+  # satu dan memilih hasil yang paling masuk akal. Kalau tampilan Tatoli
+  # berubah (ganti tema, dll) dan hasil scraping jadi kosong, sesuaikan
+  # daftar ini SETELAH memeriksa HTML halaman artikel Tatoli (klik kanan ->
+  # Inspect di browser) — tidak perlu mengubah kode Python sama sekali.
+  selectors:
+    content:
+      - "div.entry-content"
+      - "div.post-content"
+      - "div.td-post-content"
+      - "div.single-content"
+      - "div.article-content"
+      - "article .content"
+      - "article"
+    category:
+      - "span.cat-links a"
+      - "div.cat-links a"
+      - ".breadcrumb a:last-of-type"
+      - "a[rel='category tag']"
+      - ".post-category a"
+    date_meta:
+      - "meta[property='article:published_time']"
+      - "meta[name='article:published_time']"
+    date_tag:
+      - "time[datetime]"
+      - "time"
+    image_meta:
+      - "meta[property='og:image']"
+      - "meta[name='twitter:image']"
+
+paths:
+  raw: "data/raw"
+  cleaned: "data/cleaned"
+  models: "data/models"
+  keywords: "data/keywords"
+  logs: "logs"
+
+clustering:
+  min_k: 2
+  max_k: 10
+  random_state: 42
+  max_features: 5000
+  ngram_min: 1
+  ngram_max: 2
+  min_df: 2
+
+keywords:
+  top_n_terms: 10
+
+languages:
+  supported: ["id", "en", "tet"]
+  default: "tet"

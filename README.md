@@ -1,31 +1,54 @@
 # Mining Notísia Online no Deteksaun Topiku
 
-Sistem Python untuk menambang berita dari RSS feed **Tatoli**
-(https://tatoli.tl/feed/) dan mendeteksi topik yang sedang dibahas secara
-otomatis. Pipeline: **RSS/News → Collection → Preprocessing → Topic
-Detection → Dashboard**, dibangun dengan `feedparser`, `scikit-learn`
+Sistem Python untuk menambang berita dari **beberapa portal berita
+Timor-Leste sekaligus** (Tatoli, Timor Post, Independente, dan sumber lain
+yang bisa ditambahkan) dan mendeteksi topik yang sedang dibahas secara
+otomatis. Pipeline: **RSS/Web (multi-sumber) → Collection → Preprocessing →
+Topic Detection → Dashboard**, dibangun dengan `feedparser`, `scikit-learn`
 (TF-IDF + K-Means), dan **Streamlit** untuk visualisasi interaktif.
 
 ## ✨ Fitur Utama
 
-1. **RSS Collection + Web Scraping Penuh** — ambil daftar artikel terbaru
-   (judul, link, tanggal, ringkasan) dari `https://tatoli.tl/feed/` memakai
-   `feedparser`, LALU kunjungi setiap link artikelnya untuk menarik **isi
-   lengkap, kategori, dan gambar thumbnail** lewat `requests` + `BeautifulSoup`
+1. **Multi-Sumber Berita** — koleksi dari beberapa portal sekaligus
+   (dikonfigurasi di `config/settings.yaml` bagian `sources`, tinggal
+   tambah entri baru untuk sumber lain — tidak perlu ubah kode). Semua
+   sumber digabung ke satu dataset terpadu dengan kolom `source` menandai
+   asalnya, dan bisa difilter per sumber di dashboard.
+2. **RSS Collection + Web Scraping Penuh** — untuk tiap sumber, ambil
+   daftar artikel terbaru (judul, link, tanggal, ringkasan) via `feedparser`,
+   LALU kunjungi setiap link artikelnya untuk menarik **isi lengkap,
+   kategori, dan gambar thumbnail** lewat `requests` + `BeautifulSoup`
    (bisa dimatikan dan pakai ringkasan RSS saja lewat config). Hasil disimpan
-   ke `data/raw/` (snapshot timestamped + master file kumulatif ter-dedup).
-2. **Preprocessing** — cleaning teks (lowercase, hapus tanda baca/HTML),
-   stopword removal, dan **stemming/lemmatization** per bahasa (Tetun /
-   Indonesia / English), simpan ke `data/cleaned/`.
-3. **Feature Extraction (TF-IDF)** — representasi vektor numerik via
+   ke `data/raw/` (snapshot per-sumber + master file kumulatif gabungan ter-dedup).
+3. **Preprocessing Multi-Bahasa** — cleaning teks (lowercase, hapus tanda
+   baca/HTML), stopword removal, dan **stemming/lemmatization** untuk
+   **4 bahasa**: Tetun, Indonesia, **Portugis**, dan English — sesuai
+   kebutuhan media Timor-Leste yang memakai kombinasi bahasa resmi
+   (Tetun & Portugis) plus Indonesia/Inggris. Simpan ke `data/cleaned/`.
+4. **Feature Extraction (TF-IDF)** — representasi vektor numerik via
    `TfidfVectorizer`, model disimpan ke `data/models/`.
-4. **Topic Detection (K-Means)** — clustering berita per topik, jumlah
-   cluster optimal dicari otomatis lewat **silhouette score** (skor inertia
-   untuk elbow method turut dicatat), model disimpan ke `data/models/`.
-5. **Keyword Extraction** — top-10 term per cluster + label topik, disimpan
+5. **Topic Detection (K-Means)** — clustering berita per topik LINTAS SUMBER
+   (topik yang sama dari media berbeda akan mengelompok bersama), jumlah
+   cluster optimal dicari otomatis lewat **silhouette score**, model
+   disimpan ke `data/models/`.
+6. **Keyword Extraction** — top-10 term per cluster + label topik, disimpan
    ke `data/keywords/`.
-6. **Trend Dashboard (Streamlit)** — topik utama, distribusi berita per
-   cluster, **tren topik dari waktu ke waktu**, dan **wordcloud per cluster**.
+7. **Trend Dashboard (Streamlit)** — topik utama, distribusi berita per
+   cluster, **tren topik dari waktu ke waktu**, **topik trending**,
+   **wordcloud per cluster**, dan filter **bahasa, kategori, sumber
+   berita, dan rentang waktu (termasuk input jumlah hari sendiri 1–30)**.
+
+## 📰 Sumber Berita yang Didukung
+
+| Sumber | Status | Catatan |
+|---|---|---|
+| **Tatoli** (`tatoli.tl`) | ✅ Aktif & teruji | Portal berita nasional resmi |
+| **Timor Post** (`timorpost.com`) | ✅ Aktif | Ada juga edisi Português (`pt.timorpost.com`) & Indonesia (`id.timorpost.com`) — bisa ditambah sebagai sumber terpisah |
+| **Independente** (`independente.tl`) | ✅ Aktif | Kemungkinan berbasis Joomla — cek path RSS manual kalau gagal |
+| **TimorNews** (`timornews.tl`) | ⚠️ Nonaktif (perlu verifikasi) | Domain persis ini tidak ditemukan saat konfigurasi dibuat — cek nama domain yang benar dulu |
+
+Tambah/kurangi sumber di `config/settings.yaml` bagian `sources` — lihat
+komentar di file itu untuk detail tiap sumber.
 
 ## 📁 Struktur Folder
 
@@ -151,8 +174,10 @@ Dashboard versi terbaru punya tampilan lebih interaktif:
 - Tab **📊 Distribusi Topik**, **📈 Tren Topik** (line chart waktu ke waktu),
   **☁️ Wordcloud** per cluster, **🔑 Kata Kunci**, **📰 Berita** (dengan kolom
   pencarian & sortir), dan **🖼️ Galeri** thumbnail berita terbaru.
-- Filter **bahasa**, **kategori**, dan **rentang waktu** (7 hari terakhir /
-  30 hari terakhir / kustom) — berlaku ke semua tab sekaligus.
+- Filter **bahasa** (Tetun/Indonesia/Portugis/English), **kategori**,
+  **sumber berita**, dan **rentang waktu** (7 hari terakhir / 30 hari
+  terakhir / masukkan jumlah hari sendiri 1–30 / kustom tanggal) — berlaku
+  ke semua tab sekaligus.
 - Kotak pencarian bebas di sidebar untuk mencari kata kunci pada judul/isi berita.
 - Tombol **🔄 Tarik Data Sekarang** untuk update manual kapan saja.
 
@@ -271,6 +296,9 @@ python -m unittest discover -s tests -v
   Tetun yang lebih lengkap.
 - **Stemming Indonesia** memakai Sastrawi (kamus bawaan, akurat untuk
   bahasa berita formal).
+- **Stemming Portugis** memakai Snowball Stemmer dari NLTK (algoritmik,
+  tidak butuh download corpus) — cocok untuk berita berbahasa Portugis
+  dari media seperti Timor Post & Independente.
 - **Stemming English** memakai Porter Stemmer dari NLTK (algoritmik, tidak
   butuh download corpus).
 

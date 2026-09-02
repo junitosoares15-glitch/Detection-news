@@ -193,16 +193,22 @@ def run_pipeline(config: dict, feed_url: str = None, min_k=None, max_k=None, col
     }
 
 
-def print_summary(result: dict):
+def print_summary(result: dict, target_per_source: int = None):
     df = result["cleaned_df"]
     raw_paths = result["raw_paths"]
 
     print("\n" + "=" * 70)
     if "source" in df.columns:
         source_counts = df["source"].value_counts().to_dict()
-        print("Berita per sumber:")
+        print("Berita per sumber (progres koleksi):")
         for src, count in source_counts.items():
-            print(f"  - {src}: {count}")
+            if target_per_source:
+                pct = min(100, round(count / target_per_source * 100, 1))
+                bar_filled = int(pct / 5)
+                bar = "█" * bar_filled + "░" * (20 - bar_filled)
+                print(f"  - {src:<15} {count:>5} / {target_per_source} [{bar}] {pct}%")
+            else:
+                print(f"  - {src}: {count}")
     print(f"Total berita (kumulatif, semua sumber) : {len(df)}")
     print(f"Jumlah topik terdeteksi                : {result['topic_model'].best_k}")
     if raw_paths.get("total_scraped_articles"):
@@ -257,7 +263,8 @@ def main():
         print(f"\n[ERROR] Pipeline gagal: {e}\n", file=sys.stderr)
         sys.exit(1)
 
-    print_summary(result)
+    target = config.get("scraping", {}).get("target_articles_per_source")
+    print_summary(result, target_per_source=target)
 
 
 if __name__ == "__main__":

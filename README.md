@@ -199,6 +199,46 @@ kamu perlu klik **Tarik Data Sekarang** secara manual.
 > tanpa tergantung browser terbuka, gunakan cron job yang menjalankan
 > `python main.py` secara berkala (lihat bagian Deploy Online di bawah).
 
+## 🎯 Mengumpulkan 5.000+ Berita per Sumber (Koleksi Jangka Panjang)
+
+Target koleksi diatur di `config/settings.yaml` bagian
+`scraping.target_articles_per_source` (default: 5000). Progresnya bisa
+dipantau di:
+- **Terminal** — tiap `python main.py` dijalankan, muncul progress bar
+  seperti `Tatoli   342 / 5000 [█░░░░░░░░░░░░░░░░░░░] 6.8%`
+- **Dashboard** — tab 🏠 Beranda menampilkan progress bar per sumber
+
+### Realita penting: ini butuh WAKTU, bukan sekali klik
+
+RSS feed cuma menampilkan **berita terbaru** (biasanya 10-20 item), bukan
+seluruh arsip situs. Jadi kecepatan mencapai 5000 tergantung **seberapa
+sering** kamu menjalankan koleksi DAN **seberapa produktif** media tersebut
+menerbitkan berita baru — bukan sesuatu yang bisa dipercepat dengan sekali
+"tarik data".
+
+**Estimasi kasar** (asumsi media menerbitkan ~5-15 berita baru/hari, angka
+sebenarnya bisa beda jauh per media):
+
+| Frekuensi jalan | Perkiraan waktu ke 5.000 berita/sumber |
+|---|---|
+| 1x/hari (cron harian) | ~1–3 tahun |
+| Setiap 6 jam (4x/hari) | Sama saja — dibatasi oleh laju terbit media, bukan laju cek |
+| Auto-refresh dashboard 15 menit | Sama saja — begitu semua berita terbaru di feed sudah ke-capture, cek lebih sering tidak menambah data baru |
+
+**Intinya**: menjalankan lebih sering dari ~1x/beberapa jam TIDAK
+mempercepat pencapaian target, karena yang membatasi adalah **laju
+penerbitan berita oleh medianya sendiri**, bukan laju sistem kita menarik
+data. Yang justru penting adalah **konsistensi jangka panjang** — biarkan
+`python main.py` jalan otomatis tiap hari (via cron, lihat Opsi 2 di bawah)
+dan datanya akan terus bertambah tanpa perlu campur tangan manual.
+
+Kalau kamu butuh mencapai 5000 **jauh lebih cepat** (mis. untuk riset yang
+perlu data dalam hitungan minggu, bukan tahun), itu perlu pendekatan
+berbeda: **crawl arsip/halaman lama situs** (bukan cuma RSS terbaru), yang
+memerlukan modul tambahan untuk menjelajahi halaman arsip/kategori situs
+secara bertahap. Ini di luar cakupan sistem saat ini, tapi bisa
+ditambahkan — beri tahu saya kalau ini yang kamu butuhkan.
+
 ## 🌐 Deploy Online (Akses dari Mana Saja)
 
 Ada 3 opsi, dari yang paling mudah ke yang paling fleksibel:

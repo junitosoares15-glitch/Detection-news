@@ -2,15 +2,15 @@
 """
 main.py — Pipeline utama Mining Notísia Online no Deteksaun Topiku.
 
-Alur: RSS Tatoli -> Collection (data/raw) -> Preprocessing (data/cleaned)
--> Feature Extraction TF-IDF (data/models) -> Topic Detection K-Means (data/models)
--> Keyword Extraction (data/keywords) -> ringkasan hasil.
+Alur: RSS Tatoli -> Koleksaun (data/raw) -> Preprocessamentu (data/cleaned)
+-> Feature Extraction TF-IDF (data/models) -> Deteksaun Topiku K-Means (data/models)
+-> Extrasaun Keyword (data/keywords) -> rezumu rezultadu.
 
-Contoh pemakaian:
+Exemplu uza:
     python main.py
     python main.py --feed-url "https://tatoli.tl/feed/" --min-k 2 --max-k 8
 
-Untuk dashboard interaktif, jalankan:
+Ba dashboard interativu, halo run:
     streamlit run src/dashboard/trend_dashboard.py
 """
 import argparse
@@ -39,11 +39,11 @@ def run_pipeline(config: dict, feed_url: str = None, min_k=None, max_k=None, col
 
     mode = collection_mode or ("full" if scraping_cfg.get("full_content", True) else "rss")
 
-    logger.info("=== Memulai pipeline Mining Notísia (mode=%s) untuk feed: %s ===", mode, feed_url)
+    logger.info("=== Hahu pipeline Mining Notísia (mode=%s) ba feed: %s ===", mode, feed_url)
 
-    # 1) Collection: ambil & simpan berita mentah ke data/raw
+    # 1) Koleksaun: simu & rai notísia brutu iha data/raw
     if mode == "full":
-        logger.info("[1/5] Mengambil RSS (discovery) + scraping isi artikel lengkap ...")
+        logger.info("[1/5] Simu RSS (discovery) + scraping kontaudu kompletu ...")
         raw_paths = collect_full_articles(
             feed_url,
             config["paths"]["raw"],
@@ -53,31 +53,28 @@ def run_pipeline(config: dict, feed_url: str = None, min_k=None, max_k=None, col
             selectors=scraping_cfg.get("selectors"),
         )
         logger.info(
-            "Artikel baru di-scrape penuh: %s (gagal: %s) | Total berita unik: %s",
+            "Artigu foun scrape kompletu: %s (fail: %s) | Total notísia uniku: %s",
             raw_paths.get("scraped_new_articles", 0), raw_paths.get("failed_articles", 0),
             raw_paths["total_unique"],
         )
     else:
-        logger.info("[1/5] Mengambil RSS feed (ringkasan saja) ...")
+        logger.info("[1/5] Simu RSS feed (rezumu deit) ...")
         raw_paths = collect_rss(feed_url, config["paths"]["raw"], source_name=source_name)
-        # Gunakan .get() dengan fallback nama key alternatif supaya pipeline
-        # tidak crash kalau rss_scraper.py mengembalikan nama key yang berbeda
-        # (mis. "new_articles" alih-alih "new_entries").
         new_entries = raw_paths.get("new_entries", raw_paths.get("new_articles", 0))
         total_unique = raw_paths.get("total_unique", raw_paths.get("total", len(raw_paths.get("all_entries", []))))
         logger.info(
-            "Berita baru pada run ini: %s | Total berita unik terkumpul: %s",
+            "Notísia foun iha run ida-ne’e: %s | Total notísia uniku simu: %s",
             new_entries, total_unique,
         )
 
-    # 2) Preprocessing: cleaning, deteksi bahasa, stopword removal, stemming
-    logger.info("[2/5] Menjalankan preprocessing teks (cleaning + stemming) ...")
+    # 2) Preprocessamentu: limpeza, deteksaun lian, stopword removal, stemming
+    logger.info("[2/5] Halo preprocessamentu ba teks (limpeza + stemming) ...")
     cleaned_master_path = run_preprocessing(raw_paths["master_csv"], config["paths"]["cleaned"])
 
     cleaned_df = pd.read_csv(cleaned_master_path)
 
     # 3) Feature Extraction: TF-IDF
-    logger.info("[3/5] Membangun representasi TF-IDF ...")
+    logger.info("[3/5] Hahu halo representasaun TF-IDF ...")
     clustering_cfg = config.get("clustering", {})
     texts = cleaned_df["text_final"].fillna("").tolist()
     X, extractor = run_feature_extraction(
@@ -89,8 +86,8 @@ def run_pipeline(config: dict, feed_url: str = None, min_k=None, max_k=None, col
         min_df=clustering_cfg.get("min_df", 2),
     )
 
-    # 4) Topic Detection: K-Means (k optimal via silhouette score)
-    logger.info("[4/5] Menjalankan clustering K-Means untuk deteksi topik ...")
+    # 4) Deteksaun Topiku: K-Means (k otimal via silhouette score)
+    logger.info("[4/5] Halo clustering K-Means ba deteksaun topiku ...")
     labels, topic_model = run_clustering(
         X,
         models_dir=config["paths"]["models"],
@@ -101,15 +98,15 @@ def run_pipeline(config: dict, feed_url: str = None, min_k=None, max_k=None, col
     cleaned_df["cluster"] = labels
     cleaned_df.to_csv(cleaned_master_path, index=False, encoding="utf-8-sig")
 
-    # 5) Keyword Extraction
-    logger.info("[5/5] Mengekstrak kata kunci tiap topik ...")
+    # 5) Extrasaun Keyword
+    logger.info("[5/5] Extrai liafuan-chave husi topiku ida-idak ...")
     top_n = config.get("keywords", {}).get("top_n_terms", 10)
     topics, topic_labels, keywords_path = run_keyword_extraction(
         extractor.vectorizer, topic_model.kmeans, cleaned_df,
         config["paths"]["keywords"], top_n=top_n, name=SOURCE_NAME,
     )
 
-    logger.info("=== Pipeline selesai ===")
+    logger.info("=== Pipeline remata ===")
 
     return {
         "raw_paths": raw_paths,
@@ -125,27 +122,26 @@ def run_pipeline(config: dict, feed_url: str = None, min_k=None, max_k=None, col
 
 def print_summary(result: dict):
     df = result["cleaned_df"]
-
     raw_paths = result["raw_paths"]
 
     print("\n" + "=" * 70)
-    print(f"Total berita (kumulatif) : {len(df)}")
-    print(f"Jumlah topik terdeteksi  : {result['topic_model'].best_k}")
+    print(f"Total notísia (kumulativu) : {len(df)}")
+    print(f"Numeru topiku detektadu    : {result['topic_model'].best_k}")
     if "scraped_new_articles" in raw_paths:
-        print(f"Artikel di-scrape penuh pada run ini : {raw_paths['scraped_new_articles']}")
+        print(f"Artigu scrape kompletu iha run ida-ne’e : {raw_paths['scraped_new_articles']}")
         if raw_paths.get("failed_articles"):
-            print(f"Artikel gagal di-scrape (fallback ke ringkasan RSS) : {raw_paths['failed_articles']}")
+            print(f"Artigu fail scrape (fallback ba rezumu RSS) : {raw_paths['failed_articles']}")
     print("-" * 70)
-    print("Topik terdeteksi:")
+    print("Topiku detektadu:")
     for cid, words in result["topics"].items():
         size = int((df["cluster"] == cid).sum())
         label = result["topic_labels"].get(cid, "")
-        print(f"  [Cluster {cid}] ({size} berita) {label}")
-        print(f"      top terms: {', '.join(words)}")
+        print(f"  [Cluster {cid}] ({size} notísia) {label}")
+        print(f"      liafuan-chave: {', '.join(words)}")
     print("-" * 70)
-    print(f"Data mentah (master)  -> {result['raw_paths']['master_csv']}")
-    print(f"Data bersih (master)  -> {result['cleaned_master_path']}")
-    print(f"Keywords/topik        -> {result['keywords_path']}")
+    print(f"Dadus brutu (master)  -> {result['raw_paths']['master_csv']}")
+    print(f"Dadus limpu (master)  -> {result['cleaned_master_path']}")
+    print(f"Keywords/topiku       -> {result['keywords_path']}")
     print("=" * 70 + "\n")
 
 
@@ -153,14 +149,14 @@ def main():
     parser = argparse.ArgumentParser(
         description="Mining Notísia Online no Deteksaun Topiku — pipeline utama"
     )
-    parser.add_argument("--feed-url", default=None, help="URL RSS feed (default dari config/settings.yaml)")
-    parser.add_argument("--config", default=None, help="Path ke settings.yaml (opsional)")
-    parser.add_argument("--min-k", type=int, default=None, help="Jumlah cluster minimum")
-    parser.add_argument("--max-k", type=int, default=None, help="Jumlah cluster maksimum")
+    parser.add_argument("--feed-url", default=None, help="URL RSS feed (default husi config/settings.yaml)")
+    parser.add_argument("--config", default=None, help="Path ba settings.yaml (opsional)")
+    parser.add_argument("--min-k", type=int, default=None, help="Numeru cluster minimum")
+    parser.add_argument("--max-k", type=int, default=None, help="Numeru cluster maksimum")
     parser.add_argument(
         "--mode", choices=["full", "rss"], default=None,
-        help="'full' = scraping isi artikel lengkap+kategori+gambar; 'rss' = ringkasan RSS saja. "
-             "Default: ikuti config/settings.yaml (scraping.full_content).",
+        help="'full' = scraping kontaudu kompletu+kategoria+imajen; 'rss' = rezumu RSS deit. "
+             "Default: tuir config/settings.yaml (scraping.full_content).",
     )
     args = parser.parse_args()
 
@@ -173,8 +169,8 @@ def main():
             collection_mode=args.mode,
         )
     except Exception as e:
-        logging.getLogger("main").exception("Pipeline gagal: %s", e)
-        print(f"\n[ERROR] Pipeline gagal: {e}\n", file=sys.stderr)
+        logging.getLogger("main").exception("Pipeline fail: %s", e)
+        print(f"\n[ERRO] Pipeline fail: {e}\n", file=sys.stderr)
         sys.exit(1)
 
     print_summary(result)

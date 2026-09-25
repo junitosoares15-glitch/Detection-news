@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-main.py — Pipeline utama Mining Notísia Online no Deteksaun Topiku.
+main.py — Pipeline prinsipál ba Mining Notísia Online no Deteksaun Topiku.
 
-Alur: RSS Tatoli -> Koleksaun (data/raw) -> Preprocessamentu (data/cleaned)
--> Feature Extraction TF-IDF (data/models) -> Deteksaun Topiku K-Means (data/models)
--> Extrasaun Keyword (data/keywords) -> rezumu rezultadu.
+Fluxu: RSS Tatoli -> Koleksaun (data/raw) -> Prosesamentu inisiál (data/cleaned)
+-> Estrasaun Karakterístika TF-IDF (data/models) -> Deteksaun Topiku K-Means (data/models)
+-> Estrasaun Liafuan-xave (data/keywords) -> rezumu rezultadu.
 
-Exemplu uza:
+Ezemplu uza:
     python main.py
     python main.py --feed-url "https://tatoli.tl/feed/" --min-k 2 --max-k 8
 
-Ba dashboard interativu, halo run:
+Ba dashboard interativu, hala’o:
     streamlit run src/dashboard/trend_dashboard.py
 """
 import argparse
@@ -41,9 +41,9 @@ def run_pipeline(config: dict, feed_url: str = None, min_k=None, max_k=None, col
 
     logger.info("=== Hahu pipeline Mining Notísia (mode=%s) ba feed: %s ===", mode, feed_url)
 
-    # 1) Koleksaun: simu & rai notísia brutu iha data/raw
+    # 1) Koleksaun: simu no rai notísia brutu iha data/raw
     if mode == "full":
-        logger.info("[1/5] Simu RSS (discovery) + scraping kontaudu kompletu ...")
+        logger.info("[1/5] Simu RSS (deskoberta) + scraping konteúdu kompletu ...")
         raw_paths = collect_full_articles(
             feed_url,
             config["paths"]["raw"],
@@ -53,7 +53,7 @@ def run_pipeline(config: dict, feed_url: str = None, min_k=None, max_k=None, col
             selectors=scraping_cfg.get("selectors"),
         )
         logger.info(
-            "Artigu foun scrape kompletu: %s (fail: %s) | Total notísia uniku: %s",
+            "Artigu foun ne’ebé scrape kompletu: %s (la konsege: %s) | Total notísia úniku: %s",
             raw_paths.get("scraped_new_articles", 0), raw_paths.get("failed_articles", 0),
             raw_paths["total_unique"],
         )
@@ -63,18 +63,18 @@ def run_pipeline(config: dict, feed_url: str = None, min_k=None, max_k=None, col
         new_entries = raw_paths.get("new_entries", raw_paths.get("new_articles", 0))
         total_unique = raw_paths.get("total_unique", raw_paths.get("total", len(raw_paths.get("all_entries", []))))
         logger.info(
-            "Notísia foun iha run ida-ne’e: %s | Total notísia uniku simu: %s",
+            "Notísia foun iha ezekusaun ida-ne’e: %s | Total notísia úniku ne’ebé simu: %s",
             new_entries, total_unique,
         )
 
-    # 2) Preprocessamentu: limpeza, deteksaun lian, stopword removal, stemming
-    logger.info("[2/5] Halo preprocessamentu ba teks (limpeza + stemming) ...")
+    # 2) Prosesamentu inisiál: hamos testu, deteksaun lian, hasai stopword, stemming
+    logger.info("[2/5] Halo prosesamentu inisiál ba testu (hamos + stemming) ...")
     cleaned_master_path = run_preprocessing(raw_paths["master_csv"], config["paths"]["cleaned"])
 
     cleaned_df = pd.read_csv(cleaned_master_path)
 
-    # 3) Feature Extraction: TF-IDF
-    logger.info("[3/5] Hahu halo representasaun TF-IDF ...")
+    # 3) Estrasaun Karakterístika: TF-IDF
+    logger.info("[3/5] Hahu halo reprezentasaun TF-IDF ...")
     clustering_cfg = config.get("clustering", {})
     texts = cleaned_df["text_final"].fillna("").tolist()
     X, extractor = run_feature_extraction(
@@ -86,7 +86,7 @@ def run_pipeline(config: dict, feed_url: str = None, min_k=None, max_k=None, col
         min_df=clustering_cfg.get("min_df", 2),
     )
 
-    # 4) Deteksaun Topiku: K-Means (k otimal via silhouette score)
+    # 4) Deteksaun Topiku: K-Means (k ótimu husi silhouette score)
     logger.info("[4/5] Halo clustering K-Means ba deteksaun topiku ...")
     labels, topic_model = run_clustering(
         X,
@@ -98,8 +98,8 @@ def run_pipeline(config: dict, feed_url: str = None, min_k=None, max_k=None, col
     cleaned_df["cluster"] = labels
     cleaned_df.to_csv(cleaned_master_path, index=False, encoding="utf-8-sig")
 
-    # 5) Extrasaun Keyword
-    logger.info("[5/5] Extrai liafuan-chave husi topiku ida-idak ...")
+    # 5) Estrasaun Liafuan-xave
+    logger.info("[5/5] Estrai liafuan-xave husi topiku ida-idak ...")
     top_n = config.get("keywords", {}).get("top_n_terms", 10)
     topics, topic_labels, keywords_path = run_keyword_extraction(
         extractor.vectorizer, topic_model.kmeans, cleaned_df,
@@ -125,38 +125,38 @@ def print_summary(result: dict):
     raw_paths = result["raw_paths"]
 
     print("\n" + "=" * 70)
-    print(f"Total notísia (kumulativu) : {len(df)}")
-    print(f"Numeru topiku detektadu    : {result['topic_model'].best_k}")
+    print(f"Total notísia (akumuladu)  : {len(df)}")
+    print(f"Númeru topiku ne’ebé deteta : {result['topic_model'].best_k}")
     if "scraped_new_articles" in raw_paths:
-        print(f"Artigu scrape kompletu iha run ida-ne’e : {raw_paths['scraped_new_articles']}")
+        print(f"Artigu ne’ebé scrape kompletu iha ezekusaun ida-ne’e : {raw_paths['scraped_new_articles']}")
         if raw_paths.get("failed_articles"):
-            print(f"Artigu fail scrape (fallback ba rezumu RSS) : {raw_paths['failed_articles']}")
+            print(f"Artigu la konsege scrape (uza rezumu RSS hodi substitui) : {raw_paths['failed_articles']}")
     print("-" * 70)
-    print("Topiku detektadu:")
+    print("Topiku ne’ebé deteta:")
     for cid, words in result["topics"].items():
         size = int((df["cluster"] == cid).sum())
         label = result["topic_labels"].get(cid, "")
         print(f"  [Cluster {cid}] ({size} notísia) {label}")
-        print(f"      liafuan-chave: {', '.join(words)}")
+        print(f"      liafuan-xave: {', '.join(words)}")
     print("-" * 70)
     print(f"Dadus brutu (master)  -> {result['raw_paths']['master_csv']}")
-    print(f"Dadus limpu (master)  -> {result['cleaned_master_path']}")
-    print(f"Keywords/topiku       -> {result['keywords_path']}")
+    print(f"Dadus hamos (master)  -> {result['cleaned_master_path']}")
+    print(f"Liafuan-xave/topiku   -> {result['keywords_path']}")
     print("=" * 70 + "\n")
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Mining Notísia Online no Deteksaun Topiku — pipeline utama"
+        description="Mining Notísia Online no Deteksaun Topiku — pipeline prinsipál"
     )
-    parser.add_argument("--feed-url", default=None, help="URL RSS feed (default husi config/settings.yaml)")
-    parser.add_argument("--config", default=None, help="Path ba settings.yaml (opsional)")
-    parser.add_argument("--min-k", type=int, default=None, help="Numeru cluster minimum")
-    parser.add_argument("--max-k", type=int, default=None, help="Numeru cluster maksimum")
+    parser.add_argument("--feed-url", default=None, help="URL RSS feed (padraun husi config/settings.yaml)")
+    parser.add_argument("--config", default=None, help="Dalan ba settings.yaml (opsionál)")
+    parser.add_argument("--min-k", type=int, default=None, help="Númeru cluster minimu")
+    parser.add_argument("--max-k", type=int, default=None, help="Númeru cluster máximu")
     parser.add_argument(
         "--mode", choices=["full", "rss"], default=None,
-        help="'full' = scraping kontaudu kompletu+kategoria+imajen; 'rss' = rezumu RSS deit. "
-             "Default: tuir config/settings.yaml (scraping.full_content).",
+        help="'full' = scraping konteúdu kompletu+kategoria+imajen; 'rss' = rezumu RSS deit. "
+             "Padraun: tuir config/settings.yaml (scraping.full_content).",
     )
     args = parser.parse_args()
 
@@ -169,8 +169,8 @@ def main():
             collection_mode=args.mode,
         )
     except Exception as e:
-        logging.getLogger("main").exception("Pipeline fail: %s", e)
-        print(f"\n[ERRO] Pipeline fail: {e}\n", file=sys.stderr)
+        logging.getLogger("main").exception("Pipeline la konsege: %s", e)
+        print(f"\n[SALA] Pipeline la konsege: {e}\n", file=sys.stderr)
         sys.exit(1)
 
     print_summary(result)
